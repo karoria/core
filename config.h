@@ -39,7 +39,7 @@ specific needs, i.e. performance tuning or adjusting to non-typical machines.
 If more than 3 axes are configured a compliant driver and board map file is needed.
  */
 #ifndef N_AXIS
-#define N_AXIS 3 // Number of axes
+#define N_AXIS 5 // Number of axes
 #endif
 
 /*! \def AXIS_REMAP_ABC2UVW
@@ -465,7 +465,7 @@ by a driver or a plugin.
 #endif
 
 #if !defined ENABLE_BACKLASH_COMPENSATION || defined __DOXYGEN__
-#define ENABLE_BACKLASH_COMPENSATION Off
+#define ENABLE_BACKLASH_COMPENSATION On
 #endif
 
 #if COMPATIBILITY_LEVEL == 0 || defined __DOXYGEN__
@@ -474,7 +474,7 @@ by a driver or a plugin.
 Number of tools in tool table, edit to enable (max. 16 allowed)
 */
 #if !defined N_TOOLS || defined __DOXYGEN__
-#define N_TOOLS 0
+#define N_TOOLS 8
 #endif
 #endif
 
@@ -485,7 +485,7 @@ Set to \ref On or 1 to enable experimental support for parameters and expression
 Some LinuxCNC extensions are supported, conditionals and subroutines are not.
 */
 #if !defined NGC_EXPRESSIONS_ENABLE || defined __DOXYGEN__
-#define NGC_EXPRESSIONS_ENABLE Off
+#define NGC_EXPRESSIONS_ENABLE On
 #endif
 
 /*! \def NGC_N_ASSIGN_PARAMETERS_PER_BLOCK
@@ -823,7 +823,7 @@ normally-open (NO) switches on the specified pins, rather than the default norma
 */
 ///@{
 #if !defined DEFAULT_CONTROL_SIGNALS_INVERT_MASK || defined __DOXYGEN__
-#define DEFAULT_CONTROL_SIGNALS_INVERT_MASK 0 // Set to SIGNALS_BITMASK or -1 to invert all signals
+#define DEFAULT_CONTROL_SIGNALS_INVERT_MASK -1 // Set to SIGNALS_BITMASK or -1 to invert all signals
 #endif
 ///@}
 
@@ -857,7 +857,7 @@ are used the logic of the input signals should be be inverted with the \ref axis
 */
 ///@{
 #if !defined DEFAULT_LIMIT_SIGNALS_INVERT_MASK || defined __DOXYGEN__
-#define DEFAULT_LIMIT_SIGNALS_INVERT_MASK 0 // Set to -1 or AXES_BITMASK to invert for all axes
+#define DEFAULT_LIMIT_SIGNALS_INVERT_MASK -1 // Set to -1 or AXES_BITMASK to invert for all axes
 #endif
 ///@}
 
@@ -892,10 +892,10 @@ simply message the user to check the limits and enter an alarm state, rather tha
 not throw an alarm message.
 */
 #if !defined DEFAULT_HARD_LIMIT_ENABLE || defined __DOXYGEN__
-#define DEFAULT_HARD_LIMIT_ENABLE Off
+#define DEFAULT_HARD_LIMIT_ENABLE On
 #endif
 #if !defined DEFAULT_CHECK_LIMITS_AT_INIT || defined __DOXYGEN__
-#define DEFAULT_CHECK_LIMITS_AT_INIT Off
+#define DEFAULT_CHECK_LIMITS_AT_INIT On
 #endif
 
 /*! @name Group_Limits_DualAxis
@@ -979,7 +979,7 @@ Inverts the selected spindle output signals from active high to active low. Usef
 */
 ///@{
 #if !defined DEFAULT_SPINDLE_RPM_MAX || defined __DOXYGEN__
-#define DEFAULT_SPINDLE_RPM_MAX 1000.0f // rpm
+#define DEFAULT_SPINDLE_RPM_MAX 24000.0f // rpm
 #endif
 ///@}
 
@@ -1146,7 +1146,7 @@ Defines the parameters for the fourth entry in the spindle RPM linearization tab
 */
 ///@{
 #if !defined DEFAULT_TOOLCHANGE_MODE || defined __DOXYGEN__
-#define DEFAULT_TOOLCHANGE_MODE 0
+#define DEFAULT_TOOLCHANGE_MODE 4
 #endif
 ///@}
 
@@ -1200,7 +1200,7 @@ Requires homing cycles to be defined by \ref DEFAULT_HOMING_CYCLE_0 - \ref DEFAU
 */
 ///@{
 #if !defined DEFAULT_HOMING_ENABLE || defined __DOXYGEN__
-#define DEFAULT_HOMING_ENABLE Off // Default disabled. Set to \ref On or 1 to enable.
+#define DEFAULT_HOMING_ENABLE On // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
 /*! /def DEFAULT_HOMING_SINGLE_AXIS_COMMANDS
@@ -1211,7 +1211,7 @@ If you have a two-axis machine, _DON'T USE THIS_. Instead, just alter the homing
 \internal Bit 1 in settings.homing.flags.
 */
 #if !defined DEFAULT_HOMING_SINGLE_AXIS_COMMANDS || defined __DOXYGEN__
-#define DEFAULT_HOMING_SINGLE_AXIS_COMMANDS Off // Default disabled. Set to \ref On or 1 to enable.
+#define DEFAULT_HOMING_SINGLE_AXIS_COMMANDS On // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
 /*! /def DEFAULT_HOMING_INIT_LOCK
@@ -1222,7 +1222,7 @@ mainly a safety feature to remind the user to home, since position is unknown to
 \internal Bit 2 in settings.homing.flags.
 */
 #if !defined DEFAULT_HOMING_INIT_LOCK || defined __DOXYGEN__
-#define DEFAULT_HOMING_INIT_LOCK Off // Default disabled. Set to \ref On or 1 to enable.
+#define DEFAULT_HOMING_INIT_LOCK On // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
 /*! /def DEFAULT_HOMING_FORCE_SET_ORIGIN
@@ -1233,7 +1233,7 @@ define to \ref On or 1 to force grblHAL to always set the machine origin at the 
 \internal Bit 3 in settings.homing.flags.
 */
 #if !defined DEFAULT_HOMING_FORCE_SET_ORIGIN || defined __DOXYGEN__
-#define DEFAULT_HOMING_FORCE_SET_ORIGIN Off // Default disabled. Set to \ref On or 1 to enable.
+#define DEFAULT_HOMING_FORCE_SET_ORIGIN On // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
 /*! \def DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES
@@ -1247,7 +1247,7 @@ homing cycle while on the limit switch and not have to move the machine off of i
 \internal Bit 4 in settings.limits.flags.
 */
 #if !defined DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES || defined __DOXYGEN__
-#define DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES Off // Default disabled. Set to \ref On or 1 to enable.
+#define DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES On // Default disabled. Set to \ref On or 1 to enable.
 #endif
 ///@}
 
@@ -1268,7 +1268,7 @@ To allow a soft reset to override the lock uncomment the line below.
 \internal Bit 5 in settings.homing.flags.
 */
 #if !defined DEFAULT_HOMING_OVERRIDE_LOCKS || defined __DOXYGEN__
-#define DEFAULT_HOMING_OVERRIDE_LOCKS Off // Default disabled. Set to \ref On or 1 to enable.
+#define DEFAULT_HOMING_OVERRIDE_LOCKS On // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
 /*! /def DEFAULT_HOMING_KEEP_STATUS_ON_RESET
@@ -1278,7 +1278,7 @@ to a reset during motion.
 \internal Bit 6 in settings.homing.flags.
 */
 #if !defined DEFAULT_HOMING_KEEP_STATUS_ON_RESET || defined __DOXYGEN__
-#define DEFAULT_HOMING_KEEP_STATUS_ON_RESET Off // Default disabled. Set to \ref On or 1 to enable.
+#define DEFAULT_HOMING_KEEP_STATUS_ON_RESET On // Default disabled. Set to \ref On or 1 to enable.
 #endif
 ///@}
 
@@ -1296,7 +1296,7 @@ Unset bits in the mask results in movement in positive direction.
 */
 ///@{
 #if !defined DEFAULT_HOMING_FEED_RATE || defined __DOXYGEN__
-#define DEFAULT_HOMING_FEED_RATE 25.0f // mm/min
+#define DEFAULT_HOMING_FEED_RATE 100.0f // mm/min
 #endif
 ///@}
 
@@ -1304,7 +1304,7 @@ Unset bits in the mask results in movement in positive direction.
 */
 ///@{
 #if !defined DEFAULT_HOMING_SEEK_RATE || defined __DOXYGEN__
-#define DEFAULT_HOMING_SEEK_RATE 500.0f // mm/min
+#define DEFAULT_HOMING_SEEK_RATE 1000.0f // mm/min
 #endif
 ///@}
 
@@ -1312,7 +1312,7 @@ Unset bits in the mask results in movement in positive direction.
 */
 ///@{
 #if !defined DEFAULT_HOMING_DEBOUNCE_DELAY || defined __DOXYGEN__
-#define DEFAULT_HOMING_DEBOUNCE_DELAY 250 // msec (0-65k)
+#define DEFAULT_HOMING_DEBOUNCE_DELAY 5 // msec (0-65k)
 #endif
 ///@}
 
@@ -1320,7 +1320,7 @@ Unset bits in the mask results in movement in positive direction.
 */
 ///@{
 #if !defined DEFAULT_HOMING_PULLOFF || defined __DOXYGEN__
-#define DEFAULT_HOMING_PULLOFF 1.0f // mm
+#define DEFAULT_HOMING_PULLOFF 2.0f // mm
 #endif
 ///@}
 
@@ -1416,7 +1416,7 @@ greater.
 */
 ///@{
 #if !defined DEFAULT_PROBE_SIGNAL_INVERT || defined __DOXYGEN__
-#define DEFAULT_PROBE_SIGNAL_INVERT Off
+#define DEFAULT_PROBE_SIGNAL_INVERT On
 #endif
 ///@}
 
@@ -1595,7 +1595,7 @@ specific - it is _not_ defined in the core.
 */
 ///@{
 #if !defined DEFAULT_STEP_PULSE_MICROSECONDS || defined __DOXYGEN__
-#define DEFAULT_STEP_PULSE_MICROSECONDS 10.0f
+#define DEFAULT_STEP_PULSE_MICROSECONDS 3.0f
 #endif
 ///@}
 
@@ -1628,7 +1628,7 @@ is positive voltage for motions in negative direction.
 Set this value to -1 to invert for all steppers or specify which by mask.*/
 ///@{
 #if !defined DEFAULT_DIR_SIGNALS_INVERT_MASK || defined __DOXYGEN__
-#define DEFAULT_DIR_SIGNALS_INVERT_MASK 0
+#define DEFAULT_DIR_SIGNALS_INVERT_MASK 4
 #endif
 ///@}
 
@@ -1643,9 +1643,9 @@ Set this value to -1 to invert for all steppers or specify which by mask.*/
 */
 ///@{
 #if !defined DEFAULT_ENABLE_SIGNALS_INVERT_MASK || defined __DOXYGEN__
-#define DEFAULT_ENABLE_SIGNALS_INVERT_MASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT) // Default disabled. Uncomment to enable.
+#define DEFAULT_ENABLE_SIGNALS_INVERT_MASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT) // Default disabled. Uncomment to enable.
 #else
-//#define DEFAULT_ENABLE_SIGNALS_INVERT_MASK 1
+#define DEFAULT_ENABLE_SIGNALS_INVERT_MASK 0
 #endif
 ///@}
 
@@ -1663,7 +1663,7 @@ second motor for ganged/auto squared axes.
 */
 ///@{
 #if !defined DEFAULT_STEP_PULSE_DELAY || defined __DOXYGEN__
-#define DEFAULT_STEP_PULSE_DELAY 0.0f
+#define DEFAULT_STEP_PULSE_DELAY 5.0f
 #endif
 ///@}
 
@@ -1685,7 +1685,7 @@ For the controller the distance is unitless and and can be in degrees, radians, 
 */
 ///@{
 #if !defined DEFAULT_AXIS_ROTATIONAL_MASK || defined __DOXYGEN__
-#define DEFAULT_AXIS_ROTATIONAL_MASK 0
+#define DEFAULT_AXIS_ROTATIONAL_MASK 3
 #endif
 ///@}
 
@@ -1703,7 +1703,7 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 */
 ///@{
 #if !defined DEFAULT_TIMEZONE_OFFSET || defined __DOXYGEN__
-#define DEFAULT_TIMEZONE_OFFSET 0.0f
+#define DEFAULT_TIMEZONE_OFFSET 5.5f
 #endif
 ///@}
 
@@ -1714,19 +1714,19 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
  */
 ///@{
 #if !defined DEFAULT_X_STEPS_PER_MM || defined __DOXYGEN__
-#define DEFAULT_X_STEPS_PER_MM 250.0f
+#define DEFAULT_X_STEPS_PER_MM 1000.0f
 #endif
 #if !defined DEFAULT_Y_STEPS_PER_MM || defined __DOXYGEN__
-#define DEFAULT_Y_STEPS_PER_MM 250.0f
+#define DEFAULT_Y_STEPS_PER_MM 1000.0f
 #endif
 #if !defined DEFAULT_Z_STEPS_PER_MM || defined __DOXYGEN__
-#define DEFAULT_Z_STEPS_PER_MM 250.0f
+#define DEFAULT_Z_STEPS_PER_MM 1000.0f
 #endif
 #if (defined A_AXIS && !defined DEFAULT_A_STEPS_PER_MM) || defined __DOXYGEN__
-#define DEFAULT_A_STEPS_PER_MM 250.0f
+#define DEFAULT_A_STEPS_PER_MM 1000.0f
 #endif
 #if (defined B_AXIS && !defined DEFAULT_B_STEPS_PER_MM) || defined __DOXYGEN__
-#define DEFAULT_B_STEPS_PER_MM 250.0f
+#define DEFAULT_B_STEPS_PER_MM 1000.0f
 #endif
 #if (defined C_AXIS && !defined DEFAULT_C_STEPS_PER_MM) || defined __DOXYGEN__
 #define DEFAULT_C_STEPS_PER_MM 250.0f
@@ -1744,13 +1744,13 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 */
 ///@{
 #if !defined DEFAULT_X_MAX_RATE || defined __DOXYGEN__
-#define DEFAULT_X_MAX_RATE 500.0f // mm/min
+#define DEFAULT_X_MAX_RATE 5000.0f // mm/min
 #endif
 #if !defined DEFAULT_Y_MAX_RATE || defined __DOXYGEN__
-#define DEFAULT_Y_MAX_RATE 500.0f // mm/min
+#define DEFAULT_Y_MAX_RATE 5000.0f // mm/min
 #endif
 #if !defined DEFAULT_Z_MAX_RATE || defined __DOXYGEN__
-#define DEFAULT_Z_MAX_RATE 500.0f // mm/min
+#define DEFAULT_Z_MAX_RATE 4000.0f // mm/min
 #endif
 #if (defined A_AXIS && !defined DEFAULT_A_MAX_RATE) || defined __DOXYGEN__
 #define DEFAULT_A_MAX_RATE 500.0f // mm/min
@@ -1773,19 +1773,19 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 */
 ///@{
 #if !defined DEFAULT_X_ACCELERATION || defined __DOXYGEN__
-#define DEFAULT_X_ACCELERATION 10.0f // mm/sec^2
+#define DEFAULT_X_ACCELERATION 300.0f // mm/sec^2
 #endif
 #if !defined DEFAULT_Y_ACCELERATION || defined __DOXYGEN__
-#define DEFAULT_Y_ACCELERATION 10.0f // mm/sec^2
+#define DEFAULT_Y_ACCELERATION 300.0f // mm/sec^2
 #endif
 #if !defined DEFAULT_Z_ACCELERATION || defined __DOXYGEN__
-#define DEFAULT_Z_ACCELERATION 10.0f // mm/sec^2
+#define DEFAULT_Z_ACCELERATION 300.0f // mm/sec^2
 #endif
 #if (defined A_AXIS && !defined DEFAULT_A_ACCELERATION) || defined __DOXYGEN__
-#define DEFAULT_A_ACCELERATION 10.0f // mm/sec^2
+#define DEFAULT_A_ACCELERATION 300.0f // mm/sec^2
 #endif
 #if (defined B_AXIS && !defined DEFAULT_B_ACCELERATION) || defined __DOXYGEN__
-#define DEFAULT_B_ACCELERATION 10.0f // mm/sec^2
+#define DEFAULT_B_ACCELERATION 300.0f // mm/sec^2
 #endif
 #if (defined C_AXIS && !defined DEFAULT_C_ACCELERATION) || defined __DOXYGEN__
 #define DEFAULT_C_ACCELERATION 10.0f // mm/sec^2
@@ -1803,13 +1803,13 @@ __NOTE:__ Must be a positive values.
 */
 ///@{
 #if !defined DEFAULT_X_MAX_TRAVEL || defined __DOXYGEN__
-#define DEFAULT_X_MAX_TRAVEL 200.0f // mm
+#define DEFAULT_X_MAX_TRAVEL 300.0f // mm
 #endif
 #if !defined DEFAULT_Y_MAX_TRAVEL || defined __DOXYGEN__
 #define DEFAULT_Y_MAX_TRAVEL 200.0f // mm
 #endif
 #if !defined DEFAULT_Z_MAX_TRAVEL || defined __DOXYGEN__
-#define DEFAULT_Z_MAX_TRAVEL 200.0f // mm
+#define DEFAULT_Z_MAX_TRAVEL 150.0f // mm
 #endif
 #if (defined A_AXIS && !defined DEFAULT_A_MAX_TRAVEL) || defined __DOXYGEN__
 #define DEFAULT_A_MAX_TRAVEL 200.0f // mm
