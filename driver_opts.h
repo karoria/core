@@ -351,6 +351,10 @@
 #ifndef SSDP_ENABLE
 #define SSDP_ENABLE         0
 #endif
+#if SSDP_ENABLE && !HTTP_ENABLE
+#undef HTTP_ENABLE
+#define HTTP_ENABLE         1
+#endif
 #ifndef MQTT_ENABLE
 #define MQTT_ENABLE         0
 #endif
@@ -430,7 +434,7 @@
 #define NETWORK_AP_SSID         "grblHAL_AP"
 #endif
 #ifndef NETWORK_AP_PASSWORD
-#define NETWORK_AP_PASSWORD     "grblHAL"
+#define NETWORK_AP_PASSWORD     "grblHALpwd"
 #endif
 #ifndef NETWORK_AP_HOSTNAME
 #define NETWORK_AP_HOSTNAME     "grblHAL_AP"

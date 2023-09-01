@@ -769,7 +769,7 @@ void report_gcode_modes (void)
     if (settings.parking.flags.enable_override_control && sys.override.control.parking_disable)
         hal.stream.write(" M56");
 
-    hal.stream.write(appendbuf(2, " T", uitoa((uint32_t)gc_state.tool->tool)));
+    hal.stream.write(appendbuf(2, " T", uitoa((uint32_t)gc_state.tool->tool_id)));
 
     hal.stream.write(appendbuf(2, " F", get_rate_value(gc_state.feed_rate)));
 
@@ -986,8 +986,19 @@ void report_build_info (char *line, bool extended)
             if(hal.nvs.type == NVS_Emulated)
                 strcat(buf, "*");
             strcat(buf, nvs->type == NVS_Flash ? "FLASH" : (nvs->type == NVS_FRAM ? "FRAM" : "EEPROM"));
+            if(hal.nvs.size_max) {
+                strcat(buf, " ");
+                strcat(buf, uitoa(hal.nvs.size_max / 1024));
+                strcat(buf, "K");
+            }
             hal.stream.write(buf);
             hal.stream.write("]" ASCII_EOL);
+        }
+
+        if(hal.get_free_mem) {
+            hal.stream.write("[FREE MEMORY:");
+            hal.stream.write(uitoa(hal.get_free_mem() / 1024));
+            hal.stream.write("K]" ASCII_EOL);
         }
 
         if(hal.info) {
@@ -1205,22 +1216,24 @@ void report_realtime_status (void)
         axes_signals_t lim_pin_state = limit_signals_merge(hal.limits.get_state());
         control_signals_t ctrl_pin_state = hal.control.get_state();
 
+        ctrl_pin_state.cycle_start |= sys.report.cycle_start;
+
         if (lim_pin_state.value | ctrl_pin_state.value | probe_state.triggered | !probe_state.connected | sys.flags.block_delete_enabled) {
 
             char *append = &buf[4];
 
             strcpy(buf, "|Pn:");
 
-            if (probe_state.triggered)
+            if(probe_state.triggered)
                 *append++ = 'P';
 
             if(!probe_state.connected)
                 *append++ = 'O';
 
-            if (lim_pin_state.value && !hal.control.get_state().limits_override)
+            if(lim_pin_state.value && !ctrl_pin_state.limits_override)
                 append = axis_signals_tostring(append, lim_pin_state);
 
-            if (ctrl_pin_state.value)
+            if(ctrl_pin_state.value)
                 append = control_signals_tostring(append, ctrl_pin_state);
 
             *append = '\0';
@@ -1309,7 +1322,15 @@ void report_realtime_status (void)
             hal.stream.write_all(buf);
         }
 
-        if(report.mpg_mode && hal.driver_cap.mpg_mode)
+#if COMPATIBILITY_LEVEL <= 1
+        if((report.all || report.mpg_mode) && settings.report_interval) {
+            hal.stream.write_all(sys.flags.auto_reporting ? "|AR:" : "|AR");
+            if(sys.flags.auto_reporting)
+                hal.stream.write_all(uitoa(settings.report_interval));
+        }
+#endif
+
+        if(report.mpg_mode)
             hal.stream.write_all(sys.mpg_mode ? "|MPG:1" : "|MPG:0");
 
         if(report.homed && (sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual)) {
@@ -1323,7 +1344,7 @@ void report_realtime_status (void)
             hal.stream.write_all(gc_state.modal.diameter_mode ? "|D:1" : "|D:0");
 
         if(report.tool)
-            hal.stream.write_all(appendbuf(2, "|T:", uitoa(gc_state.tool->tool)));
+            hal.stream.write_all(appendbuf(2, "|T:", uitoa((uint32_t)gc_state.tool->tool_id)));
 
         if(report.tlo_reference)
             hal.stream.write_all(appendbuf(2, "|TLR:", uitoa(sys.tlo_reference_set.mask != 0)));
@@ -1342,11 +1363,6 @@ void report_realtime_status (void)
 #if COMPATIBILITY_LEVEL <= 1
     if(report.all) {
         hal.stream.write_all("|FW:grblHAL");
-        if(settings.report_interval) {
-            hal.stream.write_all(sys.flags.auto_reporting ? "|AR:" : "|AR");
-            if(sys.flags.auto_reporting)
-                hal.stream.write_all(uitoa(settings.report_interval));
-        }
         if(sys.blocking_event)
             hal.stream.write_all("|$C:1");
     } else
@@ -1354,16 +1370,16 @@ void report_realtime_status (void)
 
     if(settings.status_report.parser_state) {
 
-        static uint32_t tool;
+        static tool_id_t tool_id;
         static float feed_rate, spindle_rpm;
         static gc_modal_t last_state;
         static bool g92_active;
 
-        bool is_changed = feed_rate != gc_state.feed_rate || spindle_rpm != gc_state.spindle.rpm || tool != gc_state.tool->tool;
+        bool is_changed = feed_rate != gc_state.feed_rate || spindle_rpm != gc_state.spindle.rpm || tool_id != gc_state.tool->tool_id;
 
         if(is_changed) {
             feed_rate = gc_state.feed_rate;
-            tool = gc_state.tool->tool;
+            tool_id = gc_state.tool->tool_id;
             spindle_rpm = gc_state.spindle.rpm;
         } else if ((is_changed = g92_active != is_g92_active()))
             g92_active = !g92_active;
@@ -2166,7 +2182,7 @@ status_code_t report_time (void)
     return ok ? Status_OK : Status_InvalidStatement;
 }
 
-static void report_spindle (spindle_info_t *spindle)
+static void report_spindle (spindle_info_t *spindle, void *data)
 {
     hal.stream.write(uitoa(spindle->id));
     hal.stream.write(" - ");
@@ -2184,7 +2200,7 @@ static void report_spindle (spindle_info_t *spindle)
 
 status_code_t report_spindles (void)
 {
-    if(!spindle_enumerate_spindles(report_spindle))
+    if(!spindle_enumerate_spindles(report_spindle, NULL))
         hal.stream.write("No spindles registered." ASCII_EOL);
 
     return Status_OK;

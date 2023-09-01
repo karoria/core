@@ -1,5 +1,227 @@
 ## grblHAL changelog
 
+<a name="20230825"/>Build 20230825
+
+Core:
+
+* Added `grbl.on_tool_changed` event and removed help for disabled $-commands.
+
+Drivers:
+
+* LPC176x: added option to use reset input as E-stop, added support for Bluetooth plugin for some boards and fixed ioports IRQ issue.
+
+Templates:
+
+* Added _my_plugin_ example for keeping last selected tool number across a reboot. Enable by setting `$485=1`.
+
+---
+
+<a name="20230821-2"/>20230821-2
+
+Plugins:
+
+* Networking: increased WizChip temp packet buffer size, "hardened" code.
+
+Drivers:
+
+* RP2040: use DMA for FatFs transfers, increased WizChip SPI clock to 33 MHz.
+
+* ESP32: updated for change of `grbl.on_homing_completed` signature.
+
+---
+
+<a name="20230821"/>Build 20230821
+
+Core:
+
+* Fix for issue #349 - active feed rate override caused jog motions to hang on some drivers \(STM32F4xx and possibly others\).
+
+Drivers:
+
+* RP2040: fix for regression: ethernet was incorrectly left enabled in CMakeLists.txt.
+
+---
+
+<a name="20230820"/>Build 20230820
+
+Core:
+
+* Delta kinematics improvements. Added setting for base > floor distance, `$DELTA` command for work envelope info. Still WIP.
+
+* Changed signature of `grbl.on_homing_completed` event.
+
+Drivers:
+
+* RP2040: fix for [issue #72](https://github.com/grblHAL/RP2040/discussions/72) \(typo\), improved SPI chip select handling.
+
+---
+
+<a name="20230818"/>Build 20230818
+
+Core:
+
+* Moved kinematics implementations to separate folder and added initial implementation of delta and polar kinematics.  
+__NOTE:__ Delta and polar kinematics is WIP \(work in progress\) and incomplete. Feedback is required as I do not have machines at hand for testing.
+Ref. issue #341 and #346.
+
+---
+
+<a name="20230816"/>20230816
+
+Plugins:
+
+* WebUI: updated to handle blank commands, used to clear any repeating grblHAL errors. Needs the [latest WebUI build](https://github.com/luc-github/ESP3D-WEBUI/issues/364).
+
+---
+
+<a name="20230815"/>Build 20230815
+
+Core:
+
+* Added setting $484, _Unlock required after E-stop cleared_ by reset, default on. From issue #337.
+
+* Fixed typo, added event `grbl.on_parser_init`.
+
+Drivers:
+
+* Many: replaced parts of aux I/O driver code with calls to shared code in core. Digital aux input inversion bug fix.
+
+* ESP32: fix for incorrect Web Builder option handling for macros plugin.
+
+Templates:
+
+* Added plugin for selecting secondary probe input connected to aux input.
+
+---
+
+<a name="20230810"/>Build 20230810
+
+Core:
+
+* Fix for issue #340, CoreXY kinematics does not update position for axes A+.
+
+* Adds auto reporting state to realtime report sent on MPG mode change to off.
+
+Drivers:
+
+* RP2040: fix for [issue #70](https://github.com/grblHAL/RP2040/issues/70), incorrect handling of I2C/SPI interrupt claims. 
+
+* Many: updated EEPROM option definition to select capacity by Kbits for 1:1 match with chip marking.
+
+---
+
+<a name="20230809"/>20230809
+
+Drivers:
+
+* ESP32: fix for compilation error when VFD is the only spindle specified.
+
+Plugins:
+
+* Many: added CMakeLists.txt for RP2040 builds.
+
+---
+
+<a name="20230808"/>Build 20230808
+
+Core:
+
+* More fixes for issue #332: setting tool table data cleared current coordinate system offset, incomplete handling of G10 L10 and L11.
+
+* Added free memory to $I output when available, example: `[FREE MEMORY:102K]`
+
+* Changed reported position for failed probe to target. Parameters #5061 - #5069 returns position in coordinate system used when probing.
+
+Drivers:
+
+* RP2040: added fans plugin.
+
+* STM32F4xx: implemented free memory call.
+
+Plugins:
+
+* Fans: fixed some bugs and typos.
+
+---
+
+<a name="20230805"/> Build 20230805
+
+Core:
+
+* Fix for issue #332, incorrect NGC parameter values returned for last probed position.
+
+Drivers:
+
+* RP2040: updated PicoCNC board map++ for WizNet module based ethernet support.
+
+* STM32F4xx: tentative fix for [issue #131](https://github.com/grblHAL/STM32F4xx/issues/131), Fysetc S6 board hangs when TMC2209 drivers are enabled. Untested.
+
+Plugins:
+
+* Spindle: fix for [issue #21](https://github.com/grblHAL/Plugins_spindle/issues/21#issuecomment-1660692589), missing VFD settings.
+
+* EEPROM: added option to select capacity by Kbits for 1:1 match with chip marking.
+
+---
+
+<a name="20230729"/>Build 20230729
+
+Core:
+
+* Fix for ioSender issue [#319](https://github.com/terjeio/ioSender/issues/319), improved handling of cycle start input signal had side-effects.
+
+---
+
+<a name="20230724"/>Build 20230724
+
+Core:
+
+* Fixed bug in WHILE loop handling when first statement in macro.
+
+Drivers:
+
+* iMXRT1062: added [E5XMCS_T41](https://www.makerstore.com.au/product/elec-e5xmcst41/) board.
+
+* RP2040: fix to allow ModBus VFDs with BTT SKR Pico board. Issue [#68](https://github.com/grblHAL/RP2040/issues/68).
+
+---
+
+<a name="20230718"/>20230718
+
+Core:
+
+* Some tweaks for new Web Builder options++
+* Fixed regression in VFS file system handling causing hardfault when only one mount is present.
+
+Plugins:
+
+* Fans: Updated for core change.
+
+* WebUI: Updated for core setting handling changes.
+
+---
+
+<a name="20230714"/>20230714
+
+Core:
+
+* Added support for traversing directory structure across file system mounts. Allows access to littlefs mount via ftp.
+* Fixed inconsistent \(random\) real-time reporting of cycle start signal by adding a latch to ensure it is reported at least once.
+
+Drivers:
+
+* ESP32: added WiFi settings for country, AP channel and BSSID. Changed default AP password to make it legal, was too short.
+
+* STM32F7xx: added EStop signal handling. Driver now defaults to this for the reset input.
+
+Plugins:
+
+* Networking: improved telnet transmit handling.
+
+* WebUI: added file seek function for embedded files, may be used later by gcode macros.
+
+---
+
 <a name="20230711"/>20230711
 
 Core:
@@ -85,6 +307,8 @@ For now this is untested and may lock up the controller since the networking sta
 To be addressed in a later revision if someone with a Modbus TCP capable spindle is willing to test.
 
 * Motors and encoder: updated for core setting handling improvements.
+
+---
 
 <a name="20230607"/>Build 20230607
 

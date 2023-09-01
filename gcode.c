@@ -273,7 +273,6 @@ plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select)
 
 void gc_init (void)
 {
-
 #if COMPATIBILITY_LEVEL > 1
     memset(&gc_state, 0, sizeof(parser_state_t));
   #if N_TOOLS
@@ -293,7 +292,7 @@ void gc_init (void)
       #endif
     } else {
         memset(&gc_state, 0, offsetof(parser_state_t, g92_coord_offset));
-        gc_state.tool_pending = gc_state.tool->tool;
+        gc_state.tool_pending = gc_state.tool->tool_id;
         if(hal.tool.select)
             hal.tool.select(gc_state.tool, false);
         // TODO: restore offsets, tool offset mode?
@@ -331,6 +330,9 @@ void gc_init (void)
 
 //    if(settings.flags.lathe_mode)
 //        gc_state.modal.plane_select = PlaneSelect_ZX;
+
+    if(grbl.on_parser_init)
+        grbl.on_parser_init(&gc_state);
 }
 
 
@@ -365,15 +367,15 @@ spindle_ptrs_t *gc_spindle_get (void)
     return gc_state.spindle.hal;
 }
 
-static tool_data_t *tool_get_pending (uint32_t tool)
+static tool_data_t *tool_get_pending (tool_id_t tool_id)
 {
 #if N_TOOLS
-    return &tool_table[tool];
+    return &tool_table[tool_id];
 #else
     static tool_data_t tool_data = {0};
 
     memcpy(&tool_data, gc_state.tool, sizeof(tool_data_t));
-    tool_data.tool = tool;
+    tool_data.tool_id = tool_id;
 
     return &tool_data;
 #endif
@@ -384,7 +386,7 @@ static inline void tool_set (tool_data_t *tool)
 #if N_TOOLS
     gc_state.tool = tool;
 #else
-    gc_state.tool->tool = tool->tool;
+    gc_state.tool->tool_id = tool->tool_id;
 #endif
 }
 
@@ -1716,7 +1718,7 @@ status_code_t gc_execute_block (char *block)
         gc_block.values.t = (uint32_t)gc_block.values.q;
         gc_block.words.q = Off;
 #if NGC_EXPRESSIONS_ENABLE
-        if(sys.macro_file) {
+        if(hal.stream.file) {
             gc_state.tool_pending = 0; // force set tool
   #if N_TOOLS
             if(gc_state.g43_pending) {
@@ -2129,7 +2131,7 @@ status_code_t gc_execute_block (char *block)
                     if(p_value == 0 || p_value > MAX_TOOL_NUMBER)
                        FAIL(Status_GcodeIllegalToolTableEntry); // [Greater than MAX_TOOL_NUMBER]
 
-                    tool_table[p_value].tool = p_value;
+                    tool_table[p_value].tool_id = (tool_id_t)p_value;
 
                     if(gc_block.words.r) {
                         tool_table[p_value].radius = gc_block.values.r;
@@ -2140,18 +2142,23 @@ status_code_t gc_execute_block (char *block)
                     if(gc_block.values.l == 11 && !settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset))
                         FAIL(Status_SettingReadFail);
 
+                    if(gc_block.values.l == 1)
+                        settings_read_tool_data(p_value, &tool_table[p_value]);
+
                     idx = N_AXIS;
                     do {
-                        if (bit_istrue(axis_words.mask, bit(--idx))) {
+                        if(bit_istrue(axis_words.mask, bit(--idx))) {
                             if(gc_block.values.l == 1)
                                 tool_table[p_value].offset[idx] = gc_block.values.xyz[idx];
                             else if(gc_block.values.l == 10)
-                                tool_table[p_value].offset[idx] = gc_state.position[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
+                                tool_table[p_value].offset[idx] = gc_state.position[idx] - gc_state.modal.coord_system.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
                             else if(gc_block.values.l == 11)
                                 tool_table[p_value].offset[idx] = g59_3_offset[idx] - gc_block.values.xyz[idx];
-                            if (gc_block.values.l != 1)
-                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
-                        }
+//                            if(gc_block.values.l != 1)
+//                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
+                        } else if(gc_block.values.l == 10 || gc_block.values.l == 11)
+                            tool_table[p_value].offset[idx] = gc_state.tool_length_offset[idx];
+
                         // else, keep current stored value.
                     } while(idx);
 
@@ -2966,6 +2973,9 @@ status_code_t gc_execute_block (char *block)
                     gc_block.modal.spindle.state = gc_state.modal.spindle.state;
             }
 
+            if(grbl.on_tool_changed)
+                grbl.on_tool_changed(gc_state.tool);
+
             system_add_rt_report(Report_Tool);
         }
 
@@ -3019,7 +3029,7 @@ status_code_t gc_execute_block (char *block)
             plan_data.message = NULL;
         }
 
-        if(pending_tool->tool != gc_state.tool->tool) {
+        if(pending_tool->tool_id != gc_state.tool->tool_id) {
 
             if(grbl.on_tool_selected) {
 
@@ -3057,6 +3067,8 @@ status_code_t gc_execute_block (char *block)
 #else
             tool_set(pending_tool);
 #endif
+            if(grbl.on_tool_changed && state_get() != STATE_TOOL_CHANGE)
+                grbl.on_tool_changed(gc_state.tool);
         }
     }
 
@@ -3216,12 +3228,18 @@ status_code_t gc_execute_block (char *block)
     switch(gc_block.non_modal_command) {
 
         case NonModal_SetCoordinateData:
-            settings_write_coord_data(gc_block.values.coord_data.id, &gc_block.values.coord_data.xyz);
-            // Update system coordinate system if currently active.
-            if (gc_state.modal.coord_system.id == gc_block.values.coord_data.id) {
-                memcpy(gc_state.modal.coord_system.xyz, gc_block.values.coord_data.xyz, sizeof(gc_state.modal.coord_system.xyz));
-                system_flag_wco_change();
+#if N_TOOLS
+            if(gc_block.values.l == 2 || gc_block.values.l == 20) {
+#endif
+                settings_write_coord_data(gc_block.values.coord_data.id, &gc_block.values.coord_data.xyz);
+                // Update system coordinate system if currently active.
+                if (gc_state.modal.coord_system.id == gc_block.values.coord_data.id) {
+                    memcpy(gc_state.modal.coord_system.xyz, gc_block.values.coord_data.xyz, sizeof(gc_state.modal.coord_system.xyz));
+                    system_flag_wco_change();
+                }
+#if N_TOOLS
             }
+#endif
             break;
 
         case NonModal_GoHome_0:

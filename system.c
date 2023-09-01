@@ -127,7 +127,12 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                     system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             }
 #endif
-            if (signals.probe_triggered) {
+
+            if(signals.probe_overtravel) {
+                limit_signals_t overtravel = { .min.z = On};
+                hal.limits.interrupt_callback(overtravel);
+                // TODO: add message?
+            } else if (signals.probe_triggered) {
                 if(sys.probing_state == Probing_Off && (state_get() & (STATE_CYCLE|STATE_JOG))) {
                     system_set_exec_state_flag(EXEC_STOP);
                     sys.alarm_pending = Alarm_ProbeProtect;
@@ -140,8 +145,10 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                 }
             } else if (signals.feed_hold)
                 system_set_exec_state_flag(EXEC_FEED_HOLD);
-            else if (signals.cycle_start)
+            else if (signals.cycle_start) {
                 system_set_exec_state_flag(EXEC_CYCLE_START);
+                sys.report.cycle_start = settings.status_report.pin_state;
+            }
         }
     }
 }
@@ -271,6 +278,9 @@ void system_command_help (void)
 {
     hal.stream.write("$I - output system information" ASCII_EOL);
     hal.stream.write("$I+ - output extended system information" ASCII_EOL);
+#if !DISABLE_BUILD_INFO_WRITE_COMMAND
+    hal.stream.write("$I=<string> set build info string" ASCII_EOL);
+#endif
     hal.stream.write("$<n> - output setting <n> value" ASCII_EOL);
     hal.stream.write("$<n>=<value> - assign <value> to settings <n>" ASCII_EOL);
     hal.stream.write("$$ - output all setting values" ASCII_EOL);
@@ -289,16 +299,23 @@ void system_command_help (void)
     hal.stream.write("$HELP - output help topics" ASCII_EOL);
     hal.stream.write("$HELP <topic> - output help for <topic>" ASCII_EOL);
     hal.stream.write("$SPINDLES - output spindle list" ASCII_EOL);
+#if ENABLE_RESTORE_NVS_WIPE_ALL
     hal.stream.write("$RST=* - restore/reset all settings" ASCII_EOL);
+#endif
+#if ENABLE_RESTORE_NVS_DEFAULT_SETTINGS
     hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
+#endif
+#if ENABLE_RESTORE_NVS_DRIVER_PARAMETERS
     if(settings_get_details()->next)
         hal.stream.write("$RST=& - restore driver and plugin default settings" ASCII_EOL);
-#if N_TOOLS
-    hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);
-#else
-    hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
 #endif
-
+#if ENABLE_RESTORE_NVS_CLEAR_PARAMETERS
+  #if N_TOOLS
+    hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);
+  #else
+    hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
+  #endif
+#endif
     spindle_ptrs_t *spindle = gc_spindle_get();
     if(spindle->reset_data)
         hal.stream.write("$SR - reset spindle encoder data" ASCII_EOL);
@@ -682,7 +699,7 @@ static status_code_t go_home (sys_state_t state, axes_signals_t axes)
         if (sys.homing.mask && (sys.homing.mask & sys.homed.mask) == sys.homing.mask)
             system_execute_startup();
         else if(limits_homing_required()) { // Keep alarm state active if homing is required and not all axes homed.
-            sys.alarm = Alarm_HomingRequried;
+            sys.alarm = Alarm_HomingRequired;
             state_set(STATE_ALARM);
         }
     }
@@ -1060,6 +1077,8 @@ void system_add_rt_report (report_tracking_t report)
 {
     if(report == Report_ClearAll)
         sys.report.value = 0;
+    else if(report == Report_MPGMode)
+        sys.report.mpg_mode = hal.driver_cap.mpg_mode;
     else
         sys.report.value |= (uint32_t)report;
 

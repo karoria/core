@@ -80,6 +80,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 
 #ifdef KINEMATICS_API
     float feed_rate = pl_data->feed_rate;
+    pl_data->rate_multiplier = 1.0;
     target = kinematics.segment_line(target, plan_get_position(), pl_data, true);
 #endif
 
@@ -894,13 +895,21 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 
     if(cycle.mask) {
 
-        if(!protocol_execute_realtime()) // Check for reset and set system abort.
-            return Status_Unhandled;     // Did not complete. Alarm state set by mc_alarm.
+        if(!protocol_execute_realtime()) {  // Check for reset and set system abort.
+
+            if(grbl.on_homing_completed)
+                grbl.on_homing_completed(false);
+
+            return Status_Unhandled;        // Did not complete. Alarm state set by mc_alarm.
+        }
 
         if(homed_status != Status_OK) {
 
             if(state_get() == STATE_HOMING)
                 state_set(STATE_IDLE);
+
+            if(grbl.on_homing_completed)
+                grbl.on_homing_completed(false);
 
             return homed_status;
         }
@@ -929,13 +938,11 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
                     ? Status_LimitsEngaged
                     : Status_OK;
 
-    if(homed_status == Status_OK) {
-
+    if(homed_status == Status_OK)
         limits_set_work_envelope();
 
-        if(grbl.on_homing_completed)
-            grbl.on_homing_completed();
-    }
+    if(grbl.on_homing_completed)
+        grbl.on_homing_completed(homed_status == Status_OK);
 
     return homed_status;
 }
@@ -944,9 +951,18 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 // NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
 gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_flags_t parser_flags)
 {
+    uint_fast8_t idx = N_AXIS;
+
     // TODO: Need to update this cycle so it obeys a non-auto cycle start.
     if (state_get() == STATE_CHECK_MODE)
         return GCProbe_CheckMode;
+
+    do {
+        idx--;
+        sys.probe_position[idx] = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
+    } while(idx);
+
+    sys.probe_coordsys_id = gc_state.modal.coord_system.id;
 
     // Finish all queued commands and empty planner buffer before starting probe cycle.
     if (!protocol_buffer_synchronize())
@@ -1007,10 +1023,9 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
     // Probing cycle complete!
 
     // Set state variables and error out, if the probe failed and cycle with error is enabled.
-    if (sys.probing_state == Probing_Active) {
-        if (parser_flags.probe_is_no_error)
-            memcpy(sys.probe_position, sys.position, sizeof(sys.position));
-        else
+    if(sys.probing_state == Probing_Active) {
+        memcpy(sys.probe_position, sys.position, sizeof(sys.position));
+        if(!parser_flags.probe_is_no_error)
             system_set_exec_alarm(Alarm_ProbeFailContact);
     } else
         sys.flags.probe_succeeded = On; // Indicate to system the probing cycle completed successfully.

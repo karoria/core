@@ -13,7 +13,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20230704, see the [changelog](changelog.md) for details.  
+Latest build date is 20230821, see the [changelog](changelog.md) for details.  
 __NOTE:__ A settings reset will be performed on an update of builds earlier than 20230125. Backup and restore of settings is recommended.  
 __IMPORTANT!__  A new setting has been introduced for ganged axes motors in build 20211121.  
 I have only bench tested this for a couple of drivers, correct function should be verified after updating by those who have more than three motors configured.  
@@ -52,8 +52,9 @@ This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should b
 
 ***
 
+#### Supported G-Codes:
+
 ```
-List of Supported G-Codes:
   - Non-Modal Commands: G4, G10L2, G10L20, G28, G30, G28.1, G30.1, G53, G65*****, G92, G92.1
   - Additional Non-Modal Commands: G10L1*, G10L10*, G10L11*
   - Motion Modes: G0, G1, G2****, G3****, G5, G5.1, G38.2, G38.3, G38.4, G38.5, G80, G33*

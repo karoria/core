@@ -311,6 +311,8 @@ typedef enum {
     Setting_AutoReportInterval = 481,
     Setting_TimeZoneOffset = 482,
     Setting_FanToSpindleLink = 483,
+    Setting_UnlockAfterEStop = 484,
+    Setting_EnableToolPersistence = 485,
 
     Setting_Macro0 = 490,
     Setting_Macro1 = 491,
@@ -387,6 +389,17 @@ typedef enum {
     Setting_ModbusIdBase        = Setting_ModbusTCPBase + Setting_ModbusId,
     Setting_ModbusTCPMax        = 639,
 
+    Setting_Kinematics0         = 640,
+    Setting_Kinematics1         = 641,
+    Setting_Kinematics2         = 642,
+    Setting_Kinematics3         = 643,
+    Setting_Kinematics4         = 644,
+    Setting_Kinematics5         = 645,
+    Setting_Kinematics6         = 646,
+    Setting_Kinematics7         = 647,
+    Setting_Kinematics8         = 648,
+    Setting_Kinematics9         = 649,
+
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
 
@@ -453,7 +466,7 @@ typedef union {
                  g92_is_volatile                 :1,
                  compatibility_level             :4,
                  no_restore_position_after_M6    :1,
-                 unassigned                      :1;
+                 no_unlock_after_estop           :1;
     };
 } settingflags_t;
 
@@ -678,7 +691,7 @@ typedef struct {
     toolchange_mode_t mode;
 } tool_change_settings_t;
 
-// Global persistent settings (Stored from byte persistent storage_ADDR_GLOBAL onwards)
+// Global persistent settings (Stored from byte NVS_ADDR_GLOBAL onwards)
 typedef struct {
     // Settings struct version
     uint32_t version;
@@ -749,26 +762,27 @@ typedef enum {
     Group_CANbus,               //!< 38
     Group_Embroidery,           //!< 39
     Group_Panel,                //!< 40
-    Group_Axis,                 //!< 41
+    Group_Kinematics,           //!< 41
+    Group_Axis,                 //!< 42
 // NOTE: axis groups MUST be sequential AND last
-    Group_Axis0,                //!< 42
-    Group_XAxis = Group_Axis0,  //!< 43
-    Group_YAxis,                //!< 44
-    Group_ZAxis,                //!< 45
+    Group_Axis0,                //!< 43
+    Group_XAxis = Group_Axis0,  //!< 44
+    Group_YAxis,                //!< 45
+    Group_ZAxis,                //!< 46
 #ifdef A_AXIS
-    Group_AAxis,                //!< 46
+    Group_AAxis,                //!< 47
 #endif
 #ifdef B_AXIS
-    Group_BAxis,                //!< 47
+    Group_BAxis,                //!< 48
 #endif
 #ifdef C_AXIS
-    Group_CAxis,                //!< 48
+    Group_CAxis,                //!< 49
 #endif
 #ifdef U_AXIS
-    Group_UAxis,                //!< 49
+    Group_UAxis,                //!< 50
 #endif
 #ifdef V_AXIS
-    Group_VAxis,                //!< 50
+    Group_VAxis,                //!< 51
 #endif
     Group_Unknown = 99,         //!< 99
     Group_All = Group_Root      //!< 0

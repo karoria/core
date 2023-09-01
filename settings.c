@@ -385,6 +385,7 @@ static status_code_t set_tool_restore_pos (setting_id_t id, uint_fast16_t int_va
 static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_report_interval (setting_id_t setting, uint_fast16_t int_value);
+static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value);
 #ifndef NO_SAFETY_DOOR_SUPPORT
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value);
@@ -423,8 +424,11 @@ static char spindle_types[100] = "";
 static char axis_dist[4] = "mm";
 static char axis_rate[8] = "mm/min";
 static char axis_accel[10] = "mm/sec^2";
+#if DELTA_ROBOT
+static char axis_steps[9] = "step/rev";
+#else
 static char axis_steps[9] = "step/mm";
-
+#endif
 #define AXIS_OPTS { .subgroups = On, .increment = 1 }
 
 PROGMEM static const setting_detail_t setting_detail[] = {
@@ -590,6 +594,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PlannerBlocks, Group_General, "Planner buffer blocks", NULL, Format_Int16, "####0", "30", "1000", Setting_IsExtended, &settings.planner_buffer_blocks, NULL, NULL, { .reboot_required = On } },
      { Setting_AutoReportInterval, Group_General, "Autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
 //     { Setting_TimeZoneOffset, Group_General, "Timezone offset", NULL, Format_Decimal, "-#0.00", "0", "12", Setting_IsExtended, &settings.timezone, NULL, NULL },
+     { Setting_UnlockAfterEStop, Group_General, "Unlock required after E-Stop", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_estop_unlock, get_int, is_setting_available },
 #if NGC_EXPRESSIONS_ENABLE
      { Setting_NGCDebugOut, Group_General, "Output NGC debug messages", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_ngc_debug_out, get_int, NULL },
 #endif
@@ -719,7 +724,11 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PositionIGain, "" },
     { Setting_PositionDGain, "" },
     { Setting_PositionIMaxError, "Spindle sync PID max integrator error." },
+#if DELTA_ROBOT
+    { Setting_AxisStepsPerMM, "Travel resolution in steps per revolution." },
+#else
     { Setting_AxisStepsPerMM, "Travel resolution in steps per millimeter." },
+#endif
     { (setting_id_t)(Setting_AxisStepsPerMM + 1), "Travel resolution in steps per degree." }, // "Hack" to get correct description for rotary axes
     { Setting_AxisMaxRate, "Maximum rate. Used as G0 rapid rate." },
     { Setting_AxisAcceleration, "Acceleration. Used for motion planning to not exceed motor torque and lose steps." },
@@ -758,6 +767,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PlannerBlocks, "Number of blocks in the planner buffer." },
     { Setting_AutoReportInterval, "Interval the real time report will be sent, set to 0 to disable." },
     { Setting_TimeZoneOffset, "Offset in hours from UTC." },
+    { Setting_UnlockAfterEStop, "If set unlock (by sending $X) is required after resetting a cleared E-Stop condition." },
 #if NGC_EXPRESSIONS_ENABLE
     { Setting_NGCDebugOut, "Example: (debug, metric mode: #<_metric>, coord system: #5220)" },
 #endif
@@ -1009,10 +1019,20 @@ static status_code_t set_probe_disable_pullup (setting_id_t id, uint_fast16_t in
 
 static status_code_t set_soft_limits_enable (setting_id_t id, uint_fast16_t int_value)
 {
-    if (int_value && !settings.homing.flags.enabled)
+    if(int_value && !settings.homing.flags.enabled)
         return Status_SoftLimitError;
 
     settings.limits.flags.soft_enabled = int_value != 0;
+
+    return Status_OK;
+}
+
+static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value)
+{
+    if(!hal.signals_cap.e_stop)
+        return Status_SettingDisabled;
+
+    settings.flags.no_unlock_after_estop = int_value != 0;
 
     return Status_OK;
 }
@@ -1344,7 +1364,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             }
             settings.axis[idx].max_travel = -value; // Store as negative for grbl internal use.
             if(settings.homing.flags.init_lock && (sys.homing.mask & sys.homed.mask) != sys.homing.mask) {
-                system_raise_alarm(Alarm_HomingRequried);
+                system_raise_alarm(Alarm_HomingRequired);
                 grbl.report.feedback_message(Message_HomingCycleRequired);
             }
             break;
@@ -1578,6 +1598,10 @@ static uint32_t get_int (setting_id_t id)
             break;
 #endif
 
+        case Setting_UnlockAfterEStop:
+            value = settings.flags.no_unlock_after_estop ? 0 : 1;
+            break;
+
 #if NGC_EXPRESSIONS_ENABLE
         case Setting_NGCDebugOut:
             value = settings.flags.ngc_debug_out;
@@ -1684,7 +1708,7 @@ uint32_t setting_get_int_value (const setting_detail_t *setting, uint_fast16_t o
 {
     uint32_t value = 0;
 
-    switch(setting->type) {
+    if(setting) switch(setting->type) {
 
         case Setting_NonCore:
         case Setting_IsExtended:
@@ -1740,7 +1764,7 @@ float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t of
 {
     float value = NAN;
 
-    if(setting->datatype == Format_Decimal) switch(setting->type) {
+    if(setting && setting->datatype == Format_Decimal) switch(setting->type) {
 
         case Setting_NonCore:
         case Setting_IsExtended:
@@ -1849,6 +1873,10 @@ static bool is_setting_available (const setting_detail_t *setting)
             available = hal.rtc.set_datetime != NULL;
             break;
 
+        case Setting_UnlockAfterEStop:
+            available = hal.signals_cap.e_stop;
+            break;
+
         default:
             break;
     }
@@ -1933,10 +1961,10 @@ bool settings_read_coord_data (coord_system_id_t id, float (*coord_data)[N_AXIS]
 bool settings_write_tool_data (tool_data_t *tool_data)
 {
 #if N_TOOLS
-    assert(tool_data->tool > 0 && tool_data->tool <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
+    assert(tool_data->tool_id > 0 && tool_data->tool_id <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
 
     if(hal.nvs.type != NVS_None)
-        hal.nvs.memcpy_to_nvs(NVS_ADDR_TOOL_TABLE + (tool_data->tool - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), (uint8_t *)tool_data, sizeof(tool_data_t), true);
+        hal.nvs.memcpy_to_nvs(NVS_ADDR_TOOL_TABLE + (tool_data->tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), (uint8_t *)tool_data, sizeof(tool_data_t), true);
 
     return true;
 #else
@@ -1945,17 +1973,18 @@ bool settings_write_tool_data (tool_data_t *tool_data)
 }
 
 // Read selected tool data from persistent storage.
-bool settings_read_tool_data (uint32_t tool, tool_data_t *tool_data)
+bool settings_read_tool_data (tool_id_t tool_id, tool_data_t *tool_data)
 {
 #if N_TOOLS
-    assert(tool > 0 && tool <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
+    assert(tool_id > 0 && tool_id <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
 
-    if (!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)tool_data, NVS_ADDR_TOOL_TABLE + (tool - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool_data->tool == tool)) {
+    if (!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)tool_data, NVS_ADDR_TOOL_TABLE + (tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES),
+                                                               sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool_data->tool_id == tool_id)) {
         memset(tool_data, 0, sizeof(tool_data_t));
-        tool_data->tool = tool;
+        tool_data->tool_id = tool_id;
     }
 
-    return tool_data->tool == tool;
+    return tool_data->tool_id == tool_id;
 #else
     return false;
 #endif
@@ -2044,7 +2073,7 @@ void settings_restore (settings_restore_t restore)
         tool_data_t tool_data;
         memset(&tool_data, 0, sizeof(tool_data_t));
         for (idx = 1; idx <= N_TOOLS; idx++) {
-            tool_data.tool = idx;
+            tool_data.tool_id = (tool_id_t)idx;
             settings_write_tool_data(&tool_data);
         }
 #endif

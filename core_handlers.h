@@ -79,6 +79,7 @@ typedef struct {
 typedef bool (*enqueue_gcode_ptr)(char *data);
 typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
 
+typedef void (*on_parser_init_ptr)(parser_state_t *gc_state);
 typedef void (*on_state_change_ptr)(sys_state_t state);
 typedef void (*on_override_changed_ptr)(override_changed_t override);
 typedef void (*on_spindle_programmed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state, float rpm, spindle_rpm_mode_t mode);
@@ -96,11 +97,12 @@ typedef void (*on_unknown_feedback_message_ptr)(stream_write_ptr stream_write);
 typedef void (*on_stream_changed_ptr)(stream_type_t type);
 typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
 typedef void (*on_homing_rate_set_ptr)(axes_signals_t axes, float rate, homing_mode_t mode);
-typedef void (*on_homing_completed_ptr)(void);
+typedef void (*on_homing_completed_ptr)(bool success);
 typedef bool (*on_probe_fixture_ptr)(tool_data_t *tool, bool at_g59_3, bool on);
 typedef bool (*on_probe_start_ptr)(axes_signals_t axes, float *target, plan_line_data_t *pl_data);
 typedef void (*on_probe_completed_ptr)(void);
 typedef void (*on_tool_selected_ptr)(tool_data_t *tool);
+typedef void (*on_tool_changed_ptr)(tool_data_t *tool);
 typedef void (*on_toolchange_ack_ptr)(void);
 typedef void (*on_reset_ptr)(void);
 typedef void (*on_jog_cancel_ptr)(sys_state_t state);
@@ -121,6 +123,7 @@ typedef struct {
     // report entry points set by core at reset.
     report_t report;
     // grbl core events - may be subscribed to by drivers or by the core.
+    on_parser_init_ptr on_parser_init;
     on_state_change_ptr on_state_change;
     on_override_changed_ptr on_override_changed;
     on_report_handlers_init_ptr on_report_handlers_init;
@@ -152,6 +155,7 @@ typedef struct {
     on_gcode_message_ptr on_gcode_message;              //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
     on_gcode_message_ptr on_gcode_comment;              //!< Called when a plain gcode comment has been parsed.
     on_tool_selected_ptr on_tool_selected;              //!< Called prior to executing M6 or after executing M61.
+    on_tool_changed_ptr on_tool_changed;                //!< Called after executing M6 or M61.
     on_toolchange_ack_ptr on_toolchange_ack;            //!< Called from interrupt context.
     on_jog_cancel_ptr on_jog_cancel;                    //!< Called from interrupt context.
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
